@@ -1095,8 +1095,7 @@ def validate_media_item_data(self, data):
 2. **Tkinter Documentation.** Tkinter 8.6 Reference Manual [Электронный ресурс]. – Режим доступа: https://docs.python.org/3/library/tkinter.html 
 3. **Database Normalization.** Normal Forms in DBMS [Электронный ресурс]. – Режим доступа: https://www.guru99.com/database-normalization.html 
 4. **ГОСТ 7.32-2017.** Система стандартов по информации, библиотечному и издательскому делу. Отчет о научно-исследовательской работе. Структура и правила оформления. – М.: Стандартинформ, 2017.
-5. **Методические указания по выполнению курсовой работы** по МДК 11.01 "Технология разработки и защиты баз данных". – ГПОУ «Сыктывкарский политехнический техникум», 2024.
-6. **Примеры типовых проектов баз данных** для учебных заведений. – М.: Издательство учебной литературы, 2022.
-7. **MusicBrainz Database Schema.** [Электронный ресурс]. – Режим доступа: https://musicbrainz.org/doc/MusicBrainz_Database 
-8. **Recording Industry Association of America (RIAA).** Database Standards for Audio Collections. – 2023.
-9. **pgAdmin 4 Documentation.** [Электронный ресурс]. – Режим доступа: https://www.pgadmin.org/docs/ 
+5. **Примеры типовых проектов баз данных** для учебных заведений. – М.: Издательство учебной литературы, 2022.
+6. **MusicBrainz Database Schema.** [Электронный ресурс]. – Режим доступа: https://musicbrainz.org/doc/MusicBrainz_Database 
+7. **Recording Industry Association of America (RIAA).** Database Standards for Audio Collections. – 2023.
+8. **pgAdmin 4 Documentation.** [Электронный ресурс]. – Режим доступа: https://www.pgadmin.org/docs/ 
