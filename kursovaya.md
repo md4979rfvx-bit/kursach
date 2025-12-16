@@ -551,3 +551,251 @@
 - **DATE** — используется для хранения дат приобретения (purchase_date). Обеспечивает корректное хранение, сравнение и выполнение операций с датами, что важно для анализа динамики пополнения коллекции.
 
 Выбор типов данных основан на анализе предметной области: для цен используется точный десятичный тип, для идентификаторов — целочисленные с автоинкрементом, для текстовых данных — строковые типы соответствующей длины. Это обеспечивает баланс между точностью хранения информации, эффективностью использования дискового пространства и производительностью выполнения запросов.
+
+## <a id="project_realization">Реализация проекта в среде конкретной СУБД</a>
+
+### 5.1. Создание таблиц
+
+Реализация физической структуры базы данных выполнена в СУБД PostgreSQL 17 с использованием pgAdmin 4 как графического клиента для управления. Ниже представлен SQL-скрипт для создания всех необходимых таблиц с соблюдением всех ограничений целостности:
+
+```sql
+-- Создание таблицы "Типы носителей"
+CREATE TABLE media_types (
+    media_type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Создание таблицы "Жанры"
+CREATE TABLE genres (
+    genre_id SERIAL PRIMARY KEY,
+    genre_name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Создание таблицы "Музыкальные релизы"
+CREATE TABLE releases (
+    release_id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    release_year INTEGER,
+    original_year INTEGER,
+    label VARCHAR(100),
+    country VARCHAR(50),
+    catalog_code VARCHAR(50),
+    total_duration INTEGER,
+    total_tracks INTEGER,
+    
+    CONSTRAINT check_years 
+        CHECK (release_year IS NULL OR (release_year >= 1900 AND release_year <= EXTRACT(YEAR FROM CURRENT_DATE) + 1)),
+    CONSTRAINT check_original_year 
+        CHECK (original_year IS NULL OR (original_year >= 1900 AND original_year <= EXTRACT(YEAR FROM CURRENT_DATE) + 1))
+);
+
+-- Создание таблицы "Артисты"
+CREATE TABLE artists (
+    artist_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    artist_type VARCHAR(20),
+    country VARCHAR(50)
+);
+
+-- Создание таблицы "Треки"
+CREATE TABLE tracks (
+    track_id SERIAL PRIMARY KEY,
+    release_id INTEGER NOT NULL,
+    track_number INTEGER NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    duration INTEGER,
+    side VARCHAR(10),
+    
+    CONSTRAINT check_track_number 
+        CHECK (track_number > 0),
+    
+    FOREIGN KEY (release_id) 
+        REFERENCES releases(release_id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT unique_track_in_release 
+        UNIQUE (release_id, track_number)
+);
+
+-- Создание таблицы "Физические экземпляры"
+CREATE TABLE media_items (
+    media_item_id SERIAL PRIMARY KEY,
+    catalog_number VARCHAR(100) UNIQUE,
+    media_type_id INTEGER NOT NULL,
+    release_id INTEGER NOT NULL,
+    condition VARCHAR(30),
+    purchase_price NUMERIC(10, 2),
+    purchase_date DATE,
+    storage_location VARCHAR(255),
+    notes TEXT,
+    
+    FOREIGN KEY (media_type_id) 
+        REFERENCES media_types(media_type_id) 
+        ON DELETE RESTRICT,
+    
+    FOREIGN KEY (release_id) 
+        REFERENCES releases(release_id) 
+        ON DELETE CASCADE
+);
+
+-- Создание таблицы "Атрибуты винила"
+CREATE TABLE vinyl_attributes (
+    vinyl_id SERIAL PRIMARY KEY,
+    media_item_id INTEGER NOT NULL,
+    size VARCHAR(10),
+    sides_count INTEGER,
+    rpm INTEGER,
+    
+    FOREIGN KEY (media_item_id) 
+        REFERENCES media_items(media_item_id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT unique_vinyl_item 
+        UNIQUE (media_item_id)
+);
+
+-- Создание таблицы "Связь релизов и артистов"
+CREATE TABLE release_artists (
+    release_id INTEGER NOT NULL,
+    artist_id INTEGER NOT NULL,
+    
+    PRIMARY KEY (release_id, artist_id),
+    
+    FOREIGN KEY (release_id) 
+        REFERENCES releases(release_id) 
+        ON DELETE CASCADE,
+    
+    FOREIGN KEY (artist_id) 
+        REFERENCES artists(artist_id) 
+        ON DELETE CASCADE
+);
+
+-- Создание таблицы "Связь треков и артистов"
+CREATE TABLE track_artists (
+    track_id INTEGER NOT NULL,
+    artist_id INTEGER NOT NULL,
+    
+    PRIMARY KEY (track_id, artist_id),
+    
+    FOREIGN KEY (track_id) 
+        REFERENCES tracks(track_id) 
+        ON DELETE CASCADE,
+    
+    FOREIGN KEY (artist_id) 
+        REFERENCES artists(artist_id) 
+        ON DELETE CASCADE
+);
+
+-- Создание таблицы "Связь релизов и жанров"
+CREATE TABLE release_genres (
+    release_id INTEGER NOT NULL,
+    genre_id INTEGER NOT NULL,
+    
+    PRIMARY KEY (release_id, genre_id),
+    
+    FOREIGN KEY (release_id) 
+        REFERENCES releases(release_id) 
+        ON DELETE CASCADE,
+    
+    FOREIGN KEY (genre_id) 
+        REFERENCES genres(genre_id) 
+        ON DELETE CASCADE
+);
+```
+
+### 5.2. Создание запросов
+
+Для работы с базой данных домашней аудиотеки разработаны следующие типовые запросы:
+
+#### Запрос 1: Полный каталог коллекции с ценами в рублях
+```sql
+SELECT 
+    mi.catalog_number AS "Каталожный номер",
+    r.title AS "Название альбома",
+    a.name AS "Исполнитель",
+    mt.type_name AS "Формат",
+    mi.condition AS "Состояние",
+    mi.purchase_price || ' ₽' AS "Цена (руб)",
+    TO_CHAR(mi.purchase_date, 'DD.MM.YYYY') AS "Дата покупки",
+    mi.storage_location AS "Место хранения",
+    STRING_AGG(DISTINCT g.genre_name, ', ') AS "Жанры"
+FROM media_items mi
+JOIN releases r ON mi.release_id = r.release_id
+JOIN media_types mt ON mi.media_type_id = mt.media_type_id
+LEFT JOIN release_artists ra ON r.release_id = ra.release_id
+LEFT JOIN artists a ON ra.artist_id = a.artist_id
+LEFT JOIN release_genres rg ON r.release_id = rg.release_id
+LEFT JOIN genres g ON rg.genre_id = g.genre_id
+GROUP BY mi.catalog_number, r.title, a.name, mt.type_name, mi.condition, 
+         mi.purchase_price, mi.purchase_date, mi.storage_location
+ORDER BY r.title;
+```
+
+#### Запрос 2: Статистика коллекции по форматам
+```sql
+SELECT 
+    mt.type_name AS "Формат носителя",
+    COUNT(*) AS "Количество",
+    SUM(mi.purchase_price) || ' ₽' AS "Общая стоимость",
+    ROUND(AVG(mi.purchase_price), 2) || ' ₽' AS "Средняя цена",
+    MIN(mi.purchase_date) AS "Первая покупка",
+    MAX(mi.purchase_date) AS "Последняя покупка"
+FROM media_items mi
+JOIN media_types mt ON mi.media_type_id = mt.media_type_id
+GROUP BY mt.type_name
+ORDER BY COUNT(*) DESC;
+```
+
+#### Запрос 3: Поиск релизов по исполнителю
+```sql
+SELECT 
+    r.title AS "Альбом",
+    r.release_year AS "Год издания",
+    r.label AS "Лейбл",
+    mt.type_name AS "Формат",
+    mi.condition AS "Состояние",
+    mi.purchase_price || ' ₽' AS "Цена"
+FROM media_items mi
+JOIN releases r ON mi.release_id = r.release_id
+JOIN media_types mt ON mi.media_type_id = mt.media_type_id
+JOIN release_artists ra ON r.release_id = ra.release_id
+JOIN artists a ON ra.artist_id = a.artist_id
+WHERE a.name = 'Кино'
+ORDER BY r.release_year;
+```
+
+#### Запрос 4: Отчет о виниловых пластинках с деталями
+```sql
+SELECT 
+    r.title AS "Альбом",
+    a.name AS "Исполнитель",
+    mi.catalog_number AS "Каталожный номер",
+    va.size AS "Размер",
+    va.sides_count AS "Стороны",
+    va.rpm AS "Скорость (об/мин)",
+    mi.condition AS "Состояние",
+    mi.purchase_price || ' ₽' AS "Цена"
+FROM vinyl_attributes va
+JOIN media_items mi ON va.media_item_id = mi.media_item_id
+JOIN releases r ON mi.release_id = r.release_id
+JOIN media_types mt ON mi.media_type_id = mt.media_type_id
+LEFT JOIN release_artists ra ON r.release_id = ra.release_id
+LEFT JOIN artists a ON ra.artist_id = a.artist_id
+WHERE mt.type_name = 'Виниловая пластинка'
+ORDER BY r.title;
+```
+
+#### Запрос 5: Анализ стоимости коллекции по годам покупки
+```sql
+SELECT 
+    EXTRACT(YEAR FROM purchase_date) AS "Год покупки",
+    COUNT(*) AS "Количество покупок",
+    SUM(purchase_price) || ' ₽' AS "Общая сумма",
+    ROUND(AVG(purchase_price), 2) || ' ₽' AS "Средний чек"
+FROM media_items
+WHERE purchase_date IS NOT NULL
+GROUP BY EXTRACT(YEAR FROM purchase_date)
+ORDER BY EXTRACT(YEAR FROM purchase_date) DESC;
+```
+
