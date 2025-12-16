@@ -1089,7 +1089,7 @@ def validate_media_item_data(self, data):
    - Соответствием современным стандартам разработки ПО;
    - Решением актуальной проблемы систематизации музыкальных коллекций.
 
-## Список использованных информационных источников
+## <a id="literature"> Список использованных информационных источников </a>
 
 1. **Python Software Foundation.** Python 3.12 Documentation [Электронный ресурс]. – Режим доступа: https://docs.python.org/3/ 
 2. **Tkinter Documentation.** Tkinter 8.6 Reference Manual [Электронный ресурс]. – Режим доступа: https://docs.python.org/3/library/tkinter.html 
