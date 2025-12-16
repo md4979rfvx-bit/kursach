@@ -1099,3 +1099,11 @@ def validate_media_item_data(self, data):
 6. **MusicBrainz Database Schema.** [Электронный ресурс]. – Режим доступа: https://musicbrainz.org/doc/MusicBrainz_Database 
 7. **Recording Industry Association of America (RIAA).** Database Standards for Audio Collections. – 2023.
 8. **pgAdmin 4 Documentation.** [Электронный ресурс]. – Режим доступа: https://www.pgadmin.org/docs/ 
+
+## <a id="literature"> Приложения </a>
+
+![Приложение 1](images/image1.jpg)
+![Приложение 2](images/image2.jpg)
+![Приложение 3](images/image3.jpg)
+![Приложение 4](images/image4.jpg)
+![Приложение 5](images/image5.jpg)
